@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ABUBU Key Generator</title>
     <link rel="stylesheet" href="style.css">
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+        import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+        window.initializeApp = initializeApp;
+        window.getDatabase = getDatabase;
+        window.ref = ref;
+        window.push = push;
+        window.onValue = onValue;
+        window.remove = remove;
+    </script>
 </head>
 <body>
 
