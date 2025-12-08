@@ -1,74 +1,127 @@
+// CONFIG DO SEU FIREBASE (USE ESTA)
+const firebaseConfig = {
+    apiKey: "AIzaSyBtsqzcmV1KTgc9NKPC2rjqMI822b7Gkhs",
+    authDomain: "keysystem-ec950.firebaseapp.com",
+    databaseURL: "https://keysystem-ec950-default-rtdb.firebaseio.com",
+    projectId: "keysystem-ec950",
+    storageBucket: "keysystem-ec950.firebasestorage.app",
+    messagingSenderId: "299233253616",
+    appId: "1:299233253616:web:3a485b307624e18f558a35",
+    measurementId: "G-EGGKW3XVHV"
+};
+
+// Inicializar Firebase
+const app = window.initializeApp(firebaseConfig);
+const db = window.getDatabase(app);
+const keysRef = window.ref(db, "keys");
+
+// =========================
+// GERA UMA KEY
+// =========================
 function generateKey() {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    let part1 = "", part2 = "", part3 = "";
-
+    let p1 = "", p2 = "", p3 = "";
     for (let i = 0; i < 4; i++) {
-        part1 += chars[Math.floor(Math.random() * chars.length)];
-        part2 += chars[Math.floor(Math.random() * chars.length)];
-        part3 += chars[Math.floor(Math.random() * chars.length)];
+        p1 += chars[Math.floor(Math.random() * chars.length)];
+        p2 += chars[Math.floor(Math.random() * chars.length)];
+        p3 += chars[Math.floor(Math.random() * chars.length)];
     }
-
-    return `ABUBU-${part1}-${part2}-${part3}`;
+    return `ABUBU-${p1}-${p2}-${p3}`;
 }
 
-function saveKey(key) {
-    const expiration = Date.now() + 24 * 60 * 60 * 1000;
+// =========================
+// SALVAR NO FIREBASE
+// =========================
+async function saveKeyToFirebase(key, exp) {
+    await window.push(keysRef, {
+        key: key,
+        expiration: exp
+    });
+
     localStorage.setItem("abubu_key", key);
-    localStorage.setItem("abubu_exp", expiration);
+    localStorage.setItem("abubu_exp", exp);
+
+    displayGeneratedKey(key);
 }
 
-function loadKey() {
-    const savedKey = localStorage.getItem("abubu_key");
+// =========================
+// CARREGAR DO LOCALSTORAGE
+// =========================
+function loadKeyFromLocalStorage() {
+    const key = localStorage.getItem("abubu_key");
     const exp = localStorage.getItem("abubu_exp");
 
-    if (!savedKey || !exp) return null;
-
+    if (!key || !exp) return null;
     if (Date.now() > Number(exp)) {
-        localStorage.removeItem("abubu_key");
-        localStorage.removeItem("abubu_exp");
+        localStorage.clear();
         return null;
     }
+    return key;
+}
 
-    return savedKey;
+// =========================
+// TIMER
+// =========================
+let timerInterval;
+
+function displayGeneratedKey(key) {
+    document.getElementById("generatedKey").innerText = key;
+    document.getElementById("keyBox").classList.remove("hide");
+    updateTimer();
+
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(updateTimer, 1000);
 }
 
 function updateTimer() {
     const exp = localStorage.getItem("abubu_exp");
-    if (!exp) return;
+    const timer = document.getElementById("timer");
 
-    const now = Date.now();
-    const timeLeft = Number(exp) - now;
-
-    if (timeLeft <= 0) {
-        document.getElementById("timer").innerText = "Expirada";
+    if (!exp) {
+        timer.innerText = "Expirada";
         return;
     }
 
-    const hours = Math.floor(timeLeft / 3600000);
-    const minutes = Math.floor((timeLeft % 3600000) / 60000);
-    const seconds = Math.floor((timeLeft % 60000) / 1000);
+    const left = Number(exp) - Date.now();
 
-    document.getElementById("timer").innerText =
-        `Expira em: ${hours}h ${minutes}m ${seconds}s`;
-}
-
-document.getElementById("generateBtn").onclick = function () {
-    let key = loadKey();
-
-    if (!key) {
-        key = generateKey();
-        saveKey(key);
+    if (left <= 0) {
+        timer.innerText = "Expirada";
+        localStorage.clear();
+        return;
     }
 
-    document.getElementById("generatedKey").innerText = key;
-    document.getElementById("keyBox").classList.remove("hide");
+    const h = Math.floor(left / 3600000);
+    const m = Math.floor((left % 3600000) / 60000);
+    const s = Math.floor((left % 60000) / 1000);
 
-    updateTimer();
-    setInterval(updateTimer, 1000);
+    timer.innerText = `Expira em: ${h}h ${m}m ${s}s`;
+}
+
+// =========================
+// BOTÕES
+// =========================
+document.getElementById("generateBtn").onclick = () => {
+    let key = loadKeyFromLocalStorage();
+    if (!key) {
+        key = generateKey();
+        const exp = Date.now() + 24 * 60 * 60 * 1000;
+        saveKeyToFirebase(key, exp);
+    } else {
+        displayGeneratedKey(key);
+    }
 };
 
-document.getElementById("copyBtn").onclick = function () {
+document.getElementById("copyBtn").onclick = () => {
     const key = document.getElementById("generatedKey").innerText;
     navigator.clipboard.writeText(key);
     alert("Key copiada!");
+};
+
+// =========================
+// AO ABRIR O SITE
+// =========================
+window.onload = () => {
+    const key = loadKeyFromLocalStorage();
+    if (key) displayGeneratedKey(key);
+    updateTimer();
 };
